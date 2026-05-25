@@ -269,10 +269,14 @@ function updateGpsStatus(style, text) {
 
 // Dynamically Load Kakao Maps Web SDK
 function loadKakaoMapsSdk() {
-  if (!state.kakaoKey) return;
+  if (!state.kakaoKey) {
+    gpsDetailDisplay.innerHTML = '<span style="color: var(--gps-warning); font-weight: bold;">[카카오 API] 설정(톱니바퀴)에서 JavaScript 키를 입력해 주세요.</span>';
+    return;
+  }
   
-  // Check if script is already present
   if (window.kakao && window.kakao.maps) return;
+  
+  gpsDetailDisplay.innerHTML = '<span>카카오 맵 SDK 로드 중...</span>';
   
   const script = document.createElement('script');
   script.type = 'text/javascript';
@@ -282,8 +286,8 @@ function loadKakaoMapsSdk() {
     kakao.maps.load(() => {
       state.geocoder = new kakao.maps.services.Geocoder();
       console.log('Kakao maps SDK & Geocoder loaded successfully.');
+      gpsDetailDisplay.innerHTML = '<span style="color: var(--gps-good);">카카오 맵 SDK 연결 성공</span>';
       
-      // If we already have coordinates, query immediately
       if (state.latitude && state.longitude) {
         fetchAddressFromCoords(state.latitude, state.longitude);
         updateMinimap(state.latitude, state.longitude);
@@ -292,8 +296,8 @@ function loadKakaoMapsSdk() {
   };
   
   script.onerror = () => {
-    console.error('Failed to load Kakao Maps SDK. Check App Key or Network.');
-    gpsDetailDisplay.textContent += ' (카카오맵 SDK 로드 실패)';
+    console.error('Failed to load Kakao Maps SDK.');
+    gpsDetailDisplay.innerHTML = '<span style="color: var(--gps-poor); font-weight: bold;">[API 오류] 카카오 SDK 로드 실패. 인터넷 연결 또는 키를 확인하세요.</span>';
   };
   
   document.head.appendChild(script);
@@ -301,19 +305,22 @@ function loadKakaoMapsSdk() {
 
 // Convert Coordinates to Address
 function fetchAddressFromCoords(lat, lng) {
-  if (!state.geocoder) return;
+  if (!state.geocoder) {
+    const keyStatus = state.kakaoKey ? '키는 입력됨, SDK 로드 대기' : '카카오 API 키 입력 필요 (우측 상단 톱니바퀴)';
+    gpsDetailDisplay.innerHTML = `위치: ${lat.toFixed(6)}, ${lng.toFixed(6)}<br><span style="color: var(--gps-poor); font-weight: bold;">[주소 변환 불가] ${keyStatus}</span>`;
+    return;
+  }
   
   state.geocoder.coord2Address(lng, lat, (result, status) => {
+    const accFixed = state.accuracy ? state.accuracy.toFixed(1) : '--';
     if (status === kakao.maps.services.Status.OK) {
       const addressObj = result[0];
       
-      // 지번주소 (Lot parcel address)
       if (addressObj.address) {
         state.address = addressObj.address.address_name;
         parcelAddressInput.value = state.address;
       }
       
-      // 도로명주소 (Road Address)
       if (addressObj.road_address) {
         state.roadAddress = addressObj.road_address.address_name;
         roadAddressInput.value = state.roadAddress;
@@ -322,8 +329,18 @@ function fetchAddressFromCoords(lat, lng) {
         roadAddressInput.value = state.roadAddress;
       }
       
+      gpsDetailDisplay.innerHTML = `위치: ${lat.toFixed(6)}, ${lng.toFixed(6)} (오차: ±${accFixed}m)<br><span style="color: var(--gps-good); font-weight: bold;">[주소 조회 성공] ${state.address}</span>`;
       showToast('지번 주소를 조회했습니다.');
       drawWatermark();
+    } else {
+      let errorDesc = '알 수 없는 오류';
+      if (status === kakao.maps.services.Status.ZERO_RESULT) {
+        errorDesc = '검색 결과 없음 (좌표가 한국 영토 바깥이거나 GPS 오류)';
+      } else if (status === kakao.maps.services.Status.ERROR) {
+        errorDesc = '인증 오류 (API 키 무효 또는 허용 도메인 미등록)';
+      }
+      gpsDetailDisplay.innerHTML = `위치: ${lat.toFixed(6)}, ${lng.toFixed(6)} (오차: ±${accFixed}m)<br><span style="color: var(--gps-poor); font-weight: bold;">[주소 변환 실패] ${errorDesc}</span>`;
+      console.error('Geocoding failed with status:', status);
     }
   });
 }
