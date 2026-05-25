@@ -252,7 +252,10 @@ function setupEventListeners() {
   downloadBtn.addEventListener('click', openDownloadModal);
   
   // Download Modal controls
-  const closeDownload = () => downloadModal.classList.remove('open');
+  const closeDownload = () => {
+    downloadModal.classList.remove('open');
+    resetPhotoState();
+  };
   closeDownloadBtn.addEventListener('click', closeDownload);
   closeDownloadBtn2.addEventListener('click', closeDownload);
   downloadModal.addEventListener('click', (e) => {
@@ -267,6 +270,7 @@ function setupEventListeners() {
   // Capture Modal event listeners
   closeCaptureModalBtn.addEventListener('click', () => {
     captureModal.classList.remove('open');
+    resetPhotoState();
   });
   
   modalCropSelect.addEventListener('change', (e) => {
@@ -328,8 +332,21 @@ function setupEventListeners() {
     // Close capture modal
     captureModal.classList.remove('open');
     
-    // Auto download (satisfies '촬영 즉시 자동저장 시도')
-    openDownloadModal();
+    // Download logic
+    if (isKakaoTalkWebView()) {
+      // 카카오톡 내 인앱 브라우저인 경우 길게 누르기 다운로드 창을 띄웁니다.
+      openDownloadModal();
+    } else {
+      // 일반 브라우저인 경우 다운로드 팝업 없이 바로 파일 저장 후 캔버스를 초기화합니다.
+      try {
+        downloadWatermarkedImage();
+      } catch (err) {
+        console.error("Direct download failed, showing modal fallback: ", err);
+        openDownloadModal();
+        return;
+      }
+      resetPhotoState();
+    }
   });
   
   // Zoom Modal event listeners
@@ -806,13 +823,6 @@ function openDownloadModal() {
   
   // Open modal
   downloadModal.classList.add('open');
-  
-  // 자동 저장 구현 (일반 다운로드 즉시 시도)
-  try {
-    downloadWatermarkedImage();
-  } catch (err) {
-    console.error("Auto download failed, relying on modal: ", err);
-  }
 }
 
 // Show Toast Alert Notification
@@ -884,4 +894,27 @@ function openZoomModal(photo) {
   `;
   
   zoomModal.classList.add('open');
+}
+
+// Reset photo preview and inputs for next capture session (화면 초기화)
+function resetPhotoState() {
+  state.image = null;
+  canvas.style.display = 'none';
+  placeholderView.style.display = 'flex';
+  previewBox.classList.remove('active');
+  downloadBtn.setAttribute('disabled', 'true');
+  imageInput.value = '';
+  
+  // Reset fields for the next session
+  baleCountInput.value = '';
+  modalBaleCountInput.value = '';
+  parcelMemoInput.value = '';
+  
+  console.log('Photo state and inputs have been reset for the next capture.');
+}
+
+// Check if the current environment is KakaoTalk WebView
+function isKakaoTalkWebView() {
+  const ua = navigator.userAgent.toLowerCase();
+  return ua.indexOf('kakaotalk') !== -1;
 }
