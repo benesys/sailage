@@ -389,6 +389,17 @@ function setupEventListeners() {
         .catch((err) => console.error("Delete failed: ", err));
     }
   });
+
+  // 창 크기 조절이나 회전 시에도 3줄 높이가 유지되도록 재연산
+  window.addEventListener('resize', () => {
+    const grid = document.getElementById('album-grid');
+    if (grid && grid.children.length > 0 && !grid.querySelector('.album-empty')) {
+      const gridWidth = grid.clientWidth;
+      if (gridWidth > 0) {
+        grid.style.maxHeight = `${gridWidth}px`;
+      }
+    }
+  });
 }
 
 // GPS / Geolocation Tracking
@@ -850,6 +861,7 @@ function loadAlbum() {
       
       if (count === 0) {
         grid.innerHTML = '<div class="album-empty">저장된 인증 사진이 없습니다.<br><small style="font-size: 0.7rem; opacity: 0.7;">사진을 촬영하면 이곳에 자동으로 보관됩니다.</small></div>';
+        grid.style.maxHeight = 'none';
         return;
       }
       
@@ -872,6 +884,15 @@ function loadAlbum() {
         
         grid.appendChild(item);
       });
+      
+      // 3줄(9개) 초과 시 정확히 3줄 크기로 제한하고 스크롤바 노출
+      // 정사각형 3줄의 총 높이는 격자의 가로폭과 정확히 일치하므로 가로폭을 구해 max-height로 설정합니다.
+      setTimeout(() => {
+        const gridWidth = grid.clientWidth;
+        if (gridWidth > 0) {
+          grid.style.maxHeight = `${gridWidth}px`;
+        }
+      }, 50);
     })
     .catch((err) => console.error('Album load failed:', err));
 }
