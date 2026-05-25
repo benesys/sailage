@@ -2,6 +2,16 @@
  * Forage Parcel Camera App Javascript Logic (조사료 필지 카메라 앱 로직)
  */
 
+// Global error handler to catch and display mobile JS issues
+window.onerror = function(message, source, lineno, colno, error) {
+  const display = document.getElementById('gps-detail-display');
+  if (display) {
+    const file = source ? source.split('/').pop() : 'unknown';
+    display.innerHTML += `<div style="color: var(--gps-poor); font-weight: bold; font-size: 0.75rem; margin-top: 0.5rem; word-break: break-all; text-align: left; border-top: 1px dashed var(--gps-poor); padding-top: 0.4rem;">[런타임 오류] ${message} (${file}:${lineno}:${colno})</div>`;
+  }
+  return false;
+};
+
 // Application State
 const state = {
   image: null,
