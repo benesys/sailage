@@ -168,7 +168,8 @@ body {
 
 .preview-container {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  min-height: 220px;
+  height: auto;
   border-radius: var(--radius-md);
   background-color: #e9ecef;
   border: 2px dashed #ced4da;
@@ -184,7 +185,8 @@ body {
 .preview-container.active {
   border-style: solid;
   border-color: var(--primary-light);
-  background-color: #000;
+  background-color: transparent;
+  min-height: 0;
 }
 
 .upload-placeholder {
@@ -228,8 +230,7 @@ body {
 /* Real-time Canvas Display */
 #watermark-canvas {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+  height: auto;
   display: none;
 }
 

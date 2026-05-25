@@ -14,11 +14,12 @@ const state = {
   baleCount: '',
   inspector: '',
   memo: '',
-  watermarkStyle: 'dark-banner',
+  watermarkStyle: 'minimal',
   kakaoKey: localStorage.getItem('kakao_app_key') || '',
   geocoder: null,
   map: null,
-  gpsTimer: null
+  gpsTimer: null,
+  sdkInitFailed: false
 };
 
 // UI Elements
@@ -43,7 +44,6 @@ const inspectorNameInput = document.getElementById('inspector-name');
 const parcelMemoInput = document.getElementById('parcel-memo');
 const baleCountInput = document.getElementById('bale-count');
 
-const styleOptions = document.querySelectorAll('.style-option');
 const snapBtn = document.getElementById('snap-btn');
 const gpsBtn = document.getElementById('gps-btn');
 const downloadBtn = document.getElementById('download-btn');
@@ -137,16 +137,6 @@ function setupEventListeners() {
   baleCountInput.addEventListener('input', (e) => {
     state.baleCount = e.target.value;
     drawWatermark();
-  });
-  
-  // Watermark style selector
-  styleOptions.forEach(option => {
-    option.addEventListener('click', () => {
-      styleOptions.forEach(opt => opt.classList.remove('selected'));
-      option.classList.add('selected');
-      state.watermarkStyle = option.getAttribute('data-style');
-      drawWatermark();
-    });
   });
   
   // Settings Modal controls
@@ -282,31 +272,69 @@ function loadKakaoMapsSdk() {
   script.type = 'text/javascript';
   script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${state.kakaoKey}&libraries=services&autoload=false`;
   
+  let sdkLoaded = false;
+  
   script.onload = () => {
-    kakao.maps.load(() => {
-      state.geocoder = new kakao.maps.services.Geocoder();
-      console.log('Kakao maps SDK & Geocoder loaded successfully.');
-      gpsDetailDisplay.innerHTML = '<span style="color: var(--gps-good);">카카오 맵 SDK 연결 성공</span>';
-      
-      if (state.latitude && state.longitude) {
-        fetchAddressFromCoords(state.latitude, state.longitude);
-        updateMinimap(state.latitude, state.longitude);
+    try {
+      if (typeof kakao === 'undefined') {
+        throw new Error('kakao 객체가 로드되지 않았습니다.');
       }
-    });
+      kakao.maps.load(() => {
+        try {
+          if (!kakao.maps.services || !kakao.maps.services.Geocoder) {
+            throw new Error('Geocoder 서비스가 포함되지 않았습니다.');
+          }
+          state.geocoder = new kakao.maps.services.Geocoder();
+          sdkLoaded = true;
+          console.log('Kakao maps SDK & Geocoder loaded successfully.');
+          gpsDetailDisplay.innerHTML = '<span style="color: var(--gps-good); font-weight: bold;">카카오 맵 SDK 연결 성공</span>';
+          
+          if (state.latitude && state.longitude) {
+            fetchAddressFromCoords(state.latitude, state.longitude);
+            updateMinimap(state.latitude, state.longitude);
+          }
+        } catch (innerError) {
+          console.error(innerError);
+          state.sdkInitFailed = true;
+          gpsDetailDisplay.innerHTML = `<span style="color: var(--gps-poor); font-weight: bold;">[API 초기화 오류] ${innerError.message}</span>`;
+        }
+      });
+    } catch (outerError) {
+      console.error(outerError);
+      state.sdkInitFailed = true;
+      gpsDetailDisplay.innerHTML = `<span style="color: var(--gps-poor); font-weight: bold;">[SDK 로드 오류] ${outerError.message}</span>`;
+    }
   };
   
   script.onerror = () => {
     console.error('Failed to load Kakao Maps SDK.');
+    state.sdkInitFailed = true;
     gpsDetailDisplay.innerHTML = '<span style="color: var(--gps-poor); font-weight: bold;">[API 오류] 카카오 SDK 로드 실패. 인터넷 연결 또는 키를 확인하세요.</span>';
   };
   
   document.head.appendChild(script);
+  
+  // 4초 후 SDK가 여전히 연동되지 않았으면 도메인 미등록 가이드를 출력합니다.
+  setTimeout(() => {
+    if (!sdkLoaded) {
+      state.sdkInitFailed = true;
+      gpsDetailDisplay.innerHTML = `
+        <span style="color: var(--gps-poor); font-weight: bold;">[주소 변환 실패] 카카오 API 응답 대기 시간 초과</span><br>
+        <small style="color: var(--text-dark); font-size: 0.8rem; display: block; margin-top: 0.3rem; line-height: 1.4;">
+          카카오 개발자센터의 <strong>[내 애플리케이션 &gt; 플랫폼 &gt; Web 사이트 도메인]</strong>에 아래 주소가 등록되어 있는지 확인해 주세요:<br>
+          <strong style="color: var(--gps-poor); font-size: 0.85rem; word-break: break-all;">${window.location.origin}</strong>
+        </small>
+      `;
+    }
+  }, 4000);
 }
 
 // Convert Coordinates to Address
 function fetchAddressFromCoords(lat, lng) {
   if (!state.geocoder) {
-    const keyStatus = state.kakaoKey ? '키는 입력됨, SDK 로드 대기' : '카카오 API 키 입력 필요 (우측 상단 톱니바퀴)';
+    const keyStatus = state.sdkInitFailed 
+      ? `SDK 연결 오류 (허용 도메인 등록 확인: ${window.location.origin})` 
+      : (state.kakaoKey ? '키는 입력됨, SDK 로드 대기' : '카카오 API 키 입력 필요 (우측 상단 톱니바퀴)');
     gpsDetailDisplay.innerHTML = `위치: ${lat.toFixed(6)}, ${lng.toFixed(6)}<br><span style="color: var(--gps-poor); font-weight: bold;">[주소 변환 불가] ${keyStatus}</span>`;
     return;
   }
@@ -440,168 +468,8 @@ function drawWatermark() {
   const memoStr = state.memo ? `메모: ${state.memo}` : '';
   
   // Render styles
-  if (state.watermarkStyle === 'dark-banner') {
-    renderDarkBanner(imgWidth, imgHeight, scale, addressStr, roadStr, dateStr, gpsStr, cropStr, countStr, inspectorStr, memoStr);
-  } else if (state.watermarkStyle === 'mint-card') {
-    renderMintCard(imgWidth, imgHeight, scale, addressStr, roadStr, dateStr, gpsStr, cropStr, countStr, inspectorStr, memoStr);
-  } else {
-    renderMinimal(imgWidth, imgHeight, scale, addressStr, roadStr, dateStr, gpsStr, cropStr, countStr, inspectorStr, memoStr);
-  }
-}
-
-// Render: Style 1 - Dark Ribbon Banner at Bottom
-function renderDarkBanner(width, height, scale, address, road, date, gps, crop, count, inspector, memo) {
-  // Banner height
-  const bannerHeight = 175 * scale;
-  
-  // Draw banner backdrop
-  ctx.fillStyle = 'rgba(27, 67, 50, 0.85)'; // Transparent Deep Forest Green
-  ctx.fillRect(0, height - bannerHeight, width, bannerHeight);
-  
-  // Left border highlight
-  ctx.fillStyle = '#52b788'; // Mint Accent
-  ctx.fillRect(0, height - bannerHeight, 8 * scale, bannerHeight);
-  
-  // Font configuration
-  ctx.textBaseline = 'top';
-  
-  // Column 1 - Addresses & Date (Left)
-  let yOffset = height - bannerHeight + 20 * scale;
-  const paddingLeft = 25 * scale;
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${22 * scale}px "Outfit", "Noto Sans KR"`;
-  ctx.fillText(address, paddingLeft, yOffset);
-  
-  yOffset += 32 * scale;
-  ctx.font = `${16 * scale}px "Outfit", "Noto Sans KR"`;
-  ctx.fillStyle = '#d8f3dc'; // Soft green-white
-  if (road) {
-    ctx.fillText(road, paddingLeft, yOffset);
-    yOffset += 24 * scale;
-  }
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(date, paddingLeft, yOffset);
-  
-  yOffset += 24 * scale;
-  ctx.fillStyle = '#a3b899'; // Muted grayish green
-  ctx.font = `${14 * scale}px monospace`;
-  ctx.fillText(gps, paddingLeft, yOffset);
-  
-  // Column 2 - Crop, Inspector & Notes (Right)
-  yOffset = height - bannerHeight + 20 * scale;
-  const rightAlignX = width - 25 * scale;
-  ctx.textAlign = 'right';
-  
-  ctx.fillStyle = '#52b788'; // Accent color for crop name
-  ctx.font = `bold ${22 * scale}px "Outfit", "Noto Sans KR"`;
-  ctx.fillText(crop, rightAlignX, yOffset);
-  
-  yOffset += 32 * scale;
-  
-  if (count) {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${18 * scale}px "Outfit", "Noto Sans KR"`;
-    ctx.fillText(count, rightAlignX, yOffset);
-    yOffset += 26 * scale;
-  }
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `${16 * scale}px "Outfit", "Noto Sans KR"`;
-  
-  if (inspector) {
-    ctx.fillText(inspector, rightAlignX, yOffset);
-    yOffset += 24 * scale;
-  }
-  
-  if (memo) {
-    ctx.font = `italic ${15 * scale}px "Outfit", "Noto Sans KR"`;
-    ctx.fillStyle = '#e9ecef';
-    ctx.fillText(memo, rightAlignX, yOffset);
-  }
-  
-  // Reset text alignment
-  ctx.textAlign = 'left';
-}
-
-// Render: Style 2 - Premium Mint Card Bottom Right
-function renderMintCard(width, height, scale, address, road, date, gps, crop, count, inspector, memo) {
-  // Card dimensions
-  const cardWidth = 420 * scale;
-  const cardHeight = 220 * scale;
-  const padding = 20 * scale;
-  
-  const cardX = width - cardWidth - padding;
-  const cardY = height - cardHeight - padding;
-  
-  // Draw card background
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-  ctx.shadowBlur = 20 * scale;
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(cardX, cardY, cardWidth, cardHeight, 12 * scale) : ctx.rect(cardX, cardY, cardWidth, cardHeight);
-  ctx.fill();
-  
-  // Reset shadow for text
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  
-  // Left border bar
-  ctx.fillStyle = '#2d6a4f'; // Medium forest green
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(cardX, cardY, 8 * scale, cardHeight, [12 * scale, 0, 0, 12 * scale]) : ctx.rect(cardX, cardY, 8 * scale, cardHeight);
-  ctx.fill();
-  
-  // Text spacing
-  ctx.textBaseline = 'top';
-  let y = cardY + 15 * scale;
-  const textX = cardX + 25 * scale;
-  
-  // Crop Badge & Count
-  ctx.fillStyle = '#40916c';
-  ctx.font = `bold ${14 * scale}px "Outfit", "Noto Sans KR"`;
-  const badgeText = count ? `[ ${crop.toUpperCase()} ] | ${count}` : `[ ${crop.toUpperCase()} ]`;
-  ctx.fillText(badgeText, textX, y);
-  
-  y += 26 * scale;
-  
-  // Address
-  ctx.fillStyle = '#1c251f';
-  ctx.font = `bold ${18 * scale}px "Outfit", "Noto Sans KR"`;
-  ctx.fillText(address, textX, y);
-  
-  y += 26 * scale;
-  
-  // Road
-  if (road) {
-    ctx.fillStyle = '#5e6b62';
-    ctx.font = `${14 * scale}px "Outfit", "Noto Sans KR"`;
-    ctx.fillText(road, textX, y);
-    y += 22 * scale;
-  }
-  
-  // Date
-  ctx.fillStyle = '#1c251f';
-  ctx.font = `${14 * scale}px "Outfit", "Noto Sans KR"`;
-  ctx.fillText(date, textX, y);
-  
-  y += 22 * scale;
-  
-  // GPS
-  ctx.fillStyle = '#5e6b62';
-  ctx.font = `${12 * scale}px monospace`;
-  ctx.fillText(gps, textX, y);
-  
-  y += 20 * scale;
-  
-  // Inspector & Note
-  if (inspector || memo) {
-    const extra = [inspector, memo].filter(Boolean).join(' | ');
-    ctx.fillStyle = '#2d6a4f';
-    ctx.font = `bold ${13 * scale}px "Outfit", "Noto Sans KR"`;
-    ctx.fillText(extra, textX, y);
-  }
+  // Render styles (미니멀 투명 스타일 고정)
+  renderMinimal(imgWidth, imgHeight, scale, addressStr, roadStr, dateStr, gpsStr, cropStr, countStr, inspectorStr, memoStr);
 }
 
 // Render: Style 3 - Minimal Text with shadow directly on photo
