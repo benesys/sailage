@@ -122,6 +122,20 @@
         </div>
       </section>
 
+      <!-- 6. Saved Photo Album Section -->
+      <section class="ui-card album-section">
+        <div class="card-title" style="justify-content: space-between; border-left: 3px solid var(--primary-light);">
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><circle cx="12" cy="12" r="3"/></svg>
+            필지 인증 사진 앨범
+          </div>
+          <span class="album-count" id="album-count" style="font-size: 0.75rem; background: var(--primary-med); color: var(--white); padding: 0.15rem 0.6rem; border-radius: 20px; font-weight: bold;">0장</span>
+        </div>
+        <div class="album-grid" id="album-grid">
+          <!-- Thumbnails dynamically loaded -->
+        </div>
+      </section>
+
       <!-- Control Buttons -->
       <div class="action-section">
         <button class="btn btn-secondary" id="snap-btn">
@@ -174,6 +188,76 @@
       <div class="modal-footer" style="justify-content: center; gap: 0.5rem;">
         <button class="btn btn-secondary" id="direct-download-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">일반 다운로드 시도</button>
         <button class="btn btn-accent" id="close-download-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post-Capture Info Input Modal (사진 촬영 후 작물/개수 즉시 입력 모달) -->
+  <div class="modal-overlay" id="capture-modal">
+    <div class="modal-content" style="max-width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2>인증 사진 정보 입력</h2>
+        <button class="modal-close" id="close-capture-modal">&times;</button>
+      </div>
+      
+      <!-- Read-only automatic address preview -->
+      <div style="background-color: #f1f7f4; border: 1px solid #c7e5d6; padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem;">
+        <div style="font-size: 0.75rem; color: var(--primary-med); font-weight: bold; margin-bottom: 0.25rem;">자동 조회된 주소</div>
+        <div id="modal-parcel-address" style="font-size: 0.9rem; font-weight: 600; color: var(--text-dark); word-break: break-all; line-height: 1.4;">주소 수신 대기 중...</div>
+        <div id="modal-road-address" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; word-break: break-all; line-height: 1.4;"></div>
+      </div>
+
+      <!-- Crop & Bale Count inputs -->
+      <div class="form-group">
+        <label for="modal-crop-select">재배 작물 (조사료)</label>
+        <select id="modal-crop-select" class="form-control">
+          <option value="이탈리안 라이그라스 (IRG)">이탈리안 라이그라스 (IRG)</option>
+          <option value="호밀 (Rye)">호밀 (Rye)</option>
+          <option value="청보리 (Barley)">청보리 (Barley)</option>
+          <option value="귀리 (Oats)">귀리 (Oats)</option>
+          <option value="옥수수 (Corn)">옥수수 (Corn)</option>
+          <option value="수단그라스 (Sudangrass)">수단그라스 (Sudangrass)</option>
+          <option value="혼파 (Mixed Grasses)">혼파 (Mixed Grasses)</option>
+          <option value="기타 (Others)">기타 (직접 작성)</option>
+        </select>
+      </div>
+      
+      <div class="form-group" id="modal-custom-crop-group" style="display: none;">
+        <label for="modal-custom-crop">작물명 직접 입력</label>
+        <input type="text" id="modal-custom-crop" class="form-control" placeholder="작물명을 직접 입력하세요">
+      </div>
+
+      <div class="form-group">
+        <label for="modal-bale-count">수확 개수 (베일/개)</label>
+        <input type="number" id="modal-bale-count" class="form-control" placeholder="예: 25">
+      </div>
+
+      <div class="modal-footer" style="padding-top: 0.5rem;">
+        <button class="btn btn-primary" id="save-capture-btn" style="width: 100%; margin-top: 0.5rem;">합성 및 저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Photo Detail View Modal (앨범 사진 상세보기 줌 모달) -->
+  <div class="modal-overlay" id="zoom-modal">
+    <div class="modal-content" style="max-width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2>인증 사진 상세보기</h2>
+        <button class="modal-close" id="close-zoom-modal">&times;</button>
+      </div>
+      
+      <div style="background-color: #f8f9fa; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid #dee2e6; margin-bottom: 1rem; text-align: center;">
+        <img id="zoom-image" style="width: 100%; max-height: 45vh; object-fit: contain; border-radius: 4px; box-shadow: var(--shadow-sm);" alt="상세 사진">
+      </div>
+      
+      <div id="zoom-metadata" style="text-align: left; font-size: 0.8rem; line-height: 1.5; margin-bottom: 1.25rem; background: #f8f9fa; padding: 0.75rem; border-radius: 4px; border: 1px solid #dee2e6; color: var(--text-dark);">
+        <!-- Details dynamically loaded -->
+      </div>
+      
+      <div class="modal-footer" style="justify-content: center; gap: 0.5rem;">
+        <button class="btn btn-primary" id="zoom-download-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; width: auto; margin-top: 0;">기기 다운로드</button>
+        <button class="btn btn-accent" id="zoom-delete-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: #ffe3e3; border-color: #ffb3b3; color: #d90429;">삭제</button>
+        <button class="btn btn-secondary" id="zoom-close-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">닫기</button>
       </div>
     </div>
   </div>

@@ -12,6 +12,55 @@ window.onerror = function(message, source, lineno, colno, error) {
   return false;
 };
 
+// IndexedDB Helper Functions for Local Album Storage
+const DB_NAME = 'ForageCameraDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'photos';
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function savePhotoToDB(db, photoData) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.add(photoData);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getAllPhotosFromDB(db) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function deletePhotoFromDB(db, id) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
 // Application State
 const state = {
   image: null,
@@ -29,7 +78,9 @@ const state = {
   geocoder: null,
   map: null,
   gpsTimer: null,
-  sdkInitFailed: false
+  sdkInitFailed: false,
+  db: null,
+  currentZoomPhoto: null
 };
 
 // UI Elements
@@ -73,6 +124,26 @@ const closeDownloadBtn2 = document.getElementById('close-download-btn');
 
 const toast = document.getElementById('toast-message');
 
+// Capture Input Modal UI Elements (촬영 후 즉시 입력 팝업)
+const captureModal = document.getElementById('capture-modal');
+const closeCaptureModalBtn = document.getElementById('close-capture-modal');
+const modalParcelAddress = document.getElementById('modal-parcel-address');
+const modalRoadAddress = document.getElementById('modal-road-address');
+const modalCropSelect = document.getElementById('modal-crop-select');
+const modalCustomCropGroup = document.getElementById('modal-custom-crop-group');
+const modalCustomCropInput = document.getElementById('modal-custom-crop');
+const modalBaleCountInput = document.getElementById('modal-bale-count');
+const saveCaptureBtn = document.getElementById('save-capture-btn');
+
+// Zoom View Modal UI Elements (앨범 상세 보기 모달)
+const zoomModal = document.getElementById('zoom-modal');
+const closeZoomModalBtn = document.getElementById('close-zoom-modal');
+const zoomImage = document.getElementById('zoom-image');
+const zoomMetadata = document.getElementById('zoom-metadata');
+const zoomDownloadBtn = document.getElementById('zoom-download-btn');
+const zoomDeleteBtn = document.getElementById('zoom-delete-btn');
+const zoomCloseBtn = document.getElementById('zoom-close-btn');
+
 // Initialize App
 window.addEventListener('DOMContentLoaded', () => {
   // Load saved configuration
@@ -80,6 +151,14 @@ window.addEventListener('DOMContentLoaded', () => {
     kakaoKeyInput.value = state.kakaoKey;
     loadKakaoMapsSdk();
   }
+  
+  // Initialize Database
+  initDB()
+    .then((db) => {
+      state.db = db;
+      loadAlbum();
+    })
+    .catch((err) => console.error('Database initialization failed:', err));
   
   // Start Geolocation watch
   startGpsTracking();
@@ -183,6 +262,115 @@ function setupEventListeners() {
   directDownloadBtn.addEventListener('click', () => {
     closeDownload();
     downloadWatermarkedImage();
+  });
+  
+  // Capture Modal event listeners
+  closeCaptureModalBtn.addEventListener('click', () => {
+    captureModal.classList.remove('open');
+  });
+  
+  modalCropSelect.addEventListener('change', (e) => {
+    if (e.target.value === '기타 (Others)') {
+      modalCustomCropGroup.style.display = 'flex';
+    } else {
+      modalCustomCropGroup.style.display = 'none';
+    }
+  });
+  
+  saveCaptureBtn.addEventListener('click', () => {
+    let cropVal = modalCropSelect.value;
+    if (cropVal === '기타 (Others)') {
+      cropVal = modalCustomCropInput.value.trim() || '기타';
+    }
+    const baleVal = modalBaleCountInput.value.trim();
+    
+    // Sync state
+    state.crop = cropVal;
+    state.baleCount = baleVal;
+    
+    // Sync main form UI elements
+    cropSelect.value = modalCropSelect.value;
+    if (modalCropSelect.value === '기타 (Others)') {
+      customCropGroup.style.display = 'flex';
+      customCropInput.value = modalCustomCropInput.value;
+    } else {
+      customCropGroup.style.display = 'none';
+      customCropInput.value = '';
+    }
+    baleCountInput.value = baleVal;
+    
+    // Draw watermark
+    drawWatermark();
+    
+    // Save to IndexedDB
+    if (state.db) {
+      const photoItem = {
+        dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+        address: state.address,
+        roadAddress: state.roadAddress,
+        crop: state.crop,
+        baleCount: state.baleCount,
+        date: getFormattedDateTime(),
+        inspector: state.inspector,
+        memo: state.memo,
+        latitude: state.latitude,
+        longitude: state.longitude
+      };
+      
+      savePhotoToDB(state.db, photoItem)
+        .then(() => {
+          loadAlbum();
+          showToast('인증 사진이 앨범에 저장되었습니다.');
+        })
+        .catch((err) => console.error("IndexedDB save failed: ", err));
+    }
+    
+    // Close capture modal
+    captureModal.classList.remove('open');
+    
+    // Auto download (satisfies '촬영 즉시 자동저장 시도')
+    openDownloadModal();
+  });
+  
+  // Zoom Modal event listeners
+  const closeZoom = () => {
+    zoomModal.classList.remove('open');
+    state.currentZoomPhoto = null;
+  };
+  closeZoomModalBtn.addEventListener('click', closeZoom);
+  zoomCloseBtn.addEventListener('click', closeZoom);
+  zoomModal.addEventListener('click', (e) => {
+    if (e.target === zoomModal) closeZoom();
+  });
+  
+  zoomDownloadBtn.addEventListener('click', () => {
+    if (!state.currentZoomPhoto) return;
+    const photo = state.currentZoomPhoto;
+    const dateStr = photo.date.slice(0, 10).replace(/-/g, '');
+    const addrClean = (photo.address || '수동입력필지').replace(/[^a-zA-Z0-9가-힣\s]/g, '').trim().substring(0, 20);
+    const cropClean = photo.crop.replace(/[^a-zA-Z0-9가-힣]/g, '');
+    const filename = `${dateStr}_${addrClean}_${cropClean}.jpg`;
+    
+    const link = document.createElement('a');
+    link.href = photo.dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('사진이 다운로드 폴더에 저장되었습니다.');
+  });
+  
+  zoomDeleteBtn.addEventListener('click', () => {
+    if (!state.currentZoomPhoto) return;
+    if (confirm('이 인증 사진을 앨범에서 삭제하시겠습니까?')) {
+      deletePhotoFromDB(state.db, state.currentZoomPhoto.id)
+        .then(() => {
+          closeZoom();
+          showToast('사진이 삭제되었습니다.');
+          loadAlbum();
+        })
+        .catch((err) => console.error("Delete failed: ", err));
+    }
   });
 }
 
@@ -361,14 +549,23 @@ function fetchAddressFromCoords(lat, lng) {
       if (addressObj.address) {
         state.address = addressObj.address.address_name;
         parcelAddressInput.value = state.address;
+        if (modalParcelAddress) {
+          modalParcelAddress.textContent = state.address;
+        }
       }
       
       if (addressObj.road_address) {
         state.roadAddress = addressObj.road_address.address_name;
         roadAddressInput.value = state.roadAddress;
+        if (modalRoadAddress) {
+          modalRoadAddress.textContent = state.roadAddress;
+        }
       } else {
         state.roadAddress = '도로명 주소 없음';
         roadAddressInput.value = state.roadAddress;
+        if (modalRoadAddress) {
+          modalRoadAddress.textContent = '도로명 주소 없음';
+        }
       }
       
       gpsDetailDisplay.innerHTML = `위치: ${lat.toFixed(6)}, ${lng.toFixed(6)} (오차: ±${accFixed}m)<br><span style="color: var(--gps-good); font-weight: bold;">[주소 조회 성공] ${state.address}</span>`;
@@ -433,7 +630,26 @@ function handleImageUpload(e) {
       
       // Draw watermark once image is ready
       drawWatermark();
-      showToast('사진이 로드되었습니다.');
+      
+      // Pre-fill read-only address in capture modal
+      modalParcelAddress.textContent = state.address || '주소 수신 대기 중...';
+      modalRoadAddress.textContent = state.roadAddress || '';
+      
+      // Pre-fill crop and bale count from current state
+      modalCropSelect.value = state.crop;
+      if (state.crop !== '이탈리안 라이그라스 (IRG)' && state.crop !== '호밀 (Rye)' && state.crop !== '청보리 (Barley)' && state.crop !== '귀리 (Oats)' && state.crop !== '옥수수 (Corn)' && state.crop !== '수단그라스 (Sudangrass)' && state.crop !== '혼파 (Mixed Grasses)') {
+        modalCropSelect.value = '기타 (Others)';
+        modalCustomCropGroup.style.display = 'flex';
+        modalCustomCropInput.value = state.crop;
+      } else {
+        modalCustomCropGroup.style.display = 'none';
+        modalCustomCropInput.value = '';
+      }
+      modalBaleCountInput.value = state.baleCount;
+      
+      // Show input popup modal immediately!
+      captureModal.classList.add('open');
+      showToast('사진이 로드되었습니다. 정보를 입력해 주세요.');
     };
     img.src = event.target.result;
   };
@@ -590,6 +806,13 @@ function openDownloadModal() {
   
   // Open modal
   downloadModal.classList.add('open');
+  
+  // 자동 저장 구현 (일반 다운로드 즉시 시도)
+  try {
+    downloadWatermarkedImage();
+  } catch (err) {
+    console.error("Auto download failed, relying on modal: ", err);
+  }
 }
 
 // Show Toast Alert Notification
@@ -600,4 +823,65 @@ function showToast(message) {
   setTimeout(() => {
     toast.classList.remove('show');
   }, 3000);
+}
+
+// Load photos from IndexedDB and display in the album grid
+function loadAlbum() {
+  if (!state.db) return;
+  
+  getAllPhotosFromDB(state.db)
+    .then((photos) => {
+      const count = photos.length;
+      document.getElementById('album-count').textContent = `${count}장`;
+      
+      const grid = document.getElementById('album-grid');
+      grid.innerHTML = '';
+      
+      if (count === 0) {
+        grid.innerHTML = '<div class="album-empty">저장된 인증 사진이 없습니다.<br><small style="font-size: 0.7rem; opacity: 0.7;">사진을 촬영하면 이곳에 자동으로 보관됩니다.</small></div>';
+        return;
+      }
+      
+      // Newest photos first
+      photos.slice().reverse().forEach((photo) => {
+        const item = document.createElement('div');
+        item.className = 'album-item';
+        
+        // Show crop name and bale count in brief format
+        const labelText = photo.baleCount ? `${photo.crop} (${photo.baleCount}개)` : photo.crop;
+        
+        item.innerHTML = `
+          <img src="${photo.dataUrl}" alt="필지인증사진">
+          <div class="album-item-info">${labelText}</div>
+        `;
+        
+        item.addEventListener('click', () => {
+          openZoomModal(photo);
+        });
+        
+        grid.appendChild(item);
+      });
+    })
+    .catch((err) => console.error('Album load failed:', err));
+}
+
+// Open Photo Zoom view modal
+function openZoomModal(photo) {
+  state.currentZoomPhoto = photo;
+  zoomImage.src = photo.dataUrl;
+  
+  const gpsStr = photo.latitude 
+    ? `위도: ${photo.latitude.toFixed(6)}, 경도: ${photo.longitude.toFixed(6)}` 
+    : '위치 정보 없음';
+    
+  zoomMetadata.innerHTML = `
+    <div style="margin-bottom: 0.25rem;"><strong>지번 주소:</strong> ${photo.address || '수동입력'}</div>
+    <div style="margin-bottom: 0.25rem;"><strong>도로명 주소:</strong> ${photo.roadAddress || '없음'}</div>
+    <div style="margin-bottom: 0.25rem;"><strong>작물명:</strong> ${photo.crop}</div>
+    <div style="margin-bottom: 0.25rem;"><strong>수확 개수:</strong> ${photo.baleCount ? photo.baleCount + '개' : '입력 안 됨'}</div>
+    <div style="margin-bottom: 0.25rem;"><strong>촬영 시각:</strong> ${photo.date}</div>
+    <div><strong>GPS 수신 좌표:</strong> ${gpsStr}</div>
+  `;
+  
+  zoomModal.classList.add('open');
 }
