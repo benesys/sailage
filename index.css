@@ -1,0 +1,532 @@
+/*
+ * Forage Parcel Camera App Stylesheet (조사료 필지 카메라 앱)
+ * Theme: Agriculture / Green / Pasture / Premium Mobile-First
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+:root {
+  /* Color System */
+  --primary-deep: #1b4332;
+  --primary-med: #2d6a4f;
+  --primary-light: #40916c;
+  --accent-mint: #52b788;
+  --accent-soft: #74c69d;
+  --bg-light: #f4f6f4;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --text-dark: #1c251f;
+  --text-muted: #5e6b62;
+  --white: #ffffff;
+  
+  /* GPS Status Colors */
+  --gps-poor: #ef233c;
+  --gps-warning: #ffb703;
+  --gps-good: #2b9348;
+  
+  /* Design Tokens */
+  --font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 10px 15px -3px rgba(27, 67, 50, 0.1), 0 4px 6px -2px rgba(27, 67, 50, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(27, 67, 50, 0.15), 0 10px 10px -5px rgba(27, 67, 50, 0.08);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --glass-border: rgba(255, 255, 255, 0.4);
+}
+
+/* Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* Container */
+.app-container {
+  width: 100%;
+  max-width: 480px; /* Mobile-focused viewport width */
+  min-height: 100vh;
+  background-color: var(--white);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-bottom: 2rem;
+}
+
+/* Header Banner */
+.app-header {
+  background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary-med) 100%);
+  color: var(--white);
+  padding: 1.5rem;
+  text-align: center;
+  position: relative;
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+}
+
+.app-header h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.app-header p {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+  font-weight: 300;
+}
+
+.settings-btn {
+  position: absolute;
+  top: 1.4rem;
+  right: 1.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--white);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.settings-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(45deg);
+}
+
+/* Main Content Area */
+.app-content {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Card Styling (Glassmorphic look) */
+.ui-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.ui-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary-deep);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-left: 3px solid var(--accent-mint);
+  padding-left: 0.5rem;
+}
+
+/* Camera & Upload Area */
+.camera-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.preview-container {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  background-color: #e9ecef;
+  border: 2px dashed #ced4da;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  transition: var(--transition);
+}
+
+.preview-container.active {
+  border-style: solid;
+  border-color: var(--primary-light);
+  background-color: #000;
+}
+
+.upload-placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.upload-placeholder svg {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-light);
+  transition: var(--transition);
+}
+
+.upload-placeholder:hover svg {
+  transform: scale(1.1);
+  color: var(--accent-mint);
+}
+
+.upload-placeholder span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.upload-placeholder small {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* Hidden file inputs */
+#image-input {
+  display: none;
+}
+
+/* Real-time Canvas Display */
+#watermark-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: none;
+}
+
+/* Location Status Banner inside Card */
+.location-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+}
+
+.gps-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 50px;
+  color: var(--white);
+  text-transform: uppercase;
+}
+
+.gps-badge.poor { background-color: var(--gps-poor); }
+.gps-badge.warning { background-color: var(--gps-warning); color: #000; }
+.gps-badge.good { background-color: var(--gps-good); }
+
+.gps-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--white);
+  box-shadow: 0 0 8px var(--white);
+}
+
+.gps-badge.warning .dot {
+  background-color: #000;
+  box-shadow: 0 0 8px #000;
+}
+
+.gps-badge.active .dot {
+  animation: pulse 1.2s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.3); opacity: 1; }
+}
+
+.gps-coords {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* Fields & Form Layout */
+.form-group {
+  margin-bottom: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.form-control {
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #ced4da;
+  background-color: var(--white);
+  color: var(--text-dark);
+  width: 100%;
+  transition: var(--transition);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.15);
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.coordinate-display {
+  background-color: #f8f9fa;
+  border: 1px dashed #dee2e6;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Action Buttons Container */
+.action-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btn {
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-med) 0%, var(--primary-light) 100%);
+  color: var(--white);
+  grid-column: span 2; /* Full width export */
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary-med) 100%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background-color: #e9ecef;
+  color: var(--text-dark);
+}
+
+.btn-secondary:hover {
+  background-color: #dee2e6;
+}
+
+.btn-accent {
+  background-color: var(--radius-sm);
+  border: 1.5px solid var(--primary-light);
+  color: var(--primary-deep);
+  background-color: var(--white);
+}
+
+.btn-accent:hover {
+  background-color: rgba(64, 145, 108, 0.05);
+}
+
+/* Style Selectors for Watermark banner */
+.style-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.style-option {
+  flex: 1;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+  border: 1px solid #dee2e6;
+  background-color: var(--white);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.style-option.selected {
+  background-color: var(--primary-deep);
+  color: var(--white);
+  border-color: var(--primary-deep);
+}
+
+/* Settings Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: var(--transition);
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background-color: var(--white);
+  border-radius: var(--radius-md);
+  width: 90%;
+  max-width: 400px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(20px);
+  transition: var(--transition);
+}
+
+.modal-overlay.open .modal-content {
+  transform: translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--primary-deep);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+/* Notification Toast */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background-color: var(--primary-deep);
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+  white-space: nowrap;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Mini Map Preview */
+.minimap-container {
+  width: 100%;
+  height: 120px;
+  border-radius: var(--radius-sm);
+  background-color: #e9ecef;
+  margin-top: 0.5rem;
+  border: 1px solid #dee2e6;
+  overflow: hidden;
+  display: none;
+}

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d6a4f" />
+      <stop offset="100%" stop-color="#1b4332" />
+    </linearGradient>
+    <linearGradient id="mintGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#74c69d" />
+      <stop offset="100%" stop-color="#52b788" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#greenGrad)" />
+  
+  <!-- Outer Ring -->
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#52b788" stroke-width="8" opacity="0.4" />
+  
+  <!-- Camera Body -->
+  <path d="M380 180h-40l-20-30h-128l-20 30h-40c-22 0-40 18-40 40v160c0 22 18 40 40 40h248c22 0 40-18 40-40v-160c0-22-18-40-40-40z" fill="#ffffff" />
+  
+  <!-- Camera Lens Outer -->
+  <circle cx="256" cy="310" r="75" fill="url(#mintGrad)" />
+  
+  <!-- Camera Lens Inner -->
+  <circle cx="256" cy="310" r="50" fill="#1b4332" />
+  
+  <!-- Camera Lens Reflection -->
+  <circle cx="276" cy="290" r="15" fill="#ffffff" opacity="0.3" />
+  
+  <!-- Flash light -->
+  <circle cx="360" cy="220" r="15" fill="#74c69d" />
+  
+  <!-- Sprouting Leaves / Growth motif -->
+  <path d="M256 90c0 0-40 40-40 70s40 50 40 50 40-20 40-50-40-70-40-70z" fill="url(#mintGrad)" />
+  <path d="M220 120c0 0-35 25-35 50s35 40 35 40 30-15 30-40-30-50-30-50z" fill="#52b788" opacity="0.8" />
+  <path d="M292 120c0 0 35 25 35 50s-35 40-35 40-30-15-30-40 30-50 30-50z" fill="#74c69d" opacity="0.8" />
+</svg>
