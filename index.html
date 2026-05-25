@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>조사료 필지 인증 카메라</title>
-  <link rel="stylesheet" href="index.css?v=12">
+  <link rel="stylesheet" href="index.css?v=13">
   <!-- PWA Support -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1b4332">
@@ -267,13 +267,27 @@
   <div class="toast" id="toast-message">주소가 성공적으로 변환되었습니다!</div>
 
   <!-- JS Logic Hooks -->
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
   <!-- Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        // Only reload if the page was previously controlled by a service worker
+        if (navigator.serviceWorker.controller) {
+          refreshing = true;
+          console.log('New Service Worker activated. Reloading page...');
+          window.location.reload();
+        }
+      });
+
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registered successfully:', reg))
+          .then(reg => {
+            console.log('Service Worker registered successfully:', reg);
+            reg.update();
+          })
           .catch(err => console.error('Service Worker registration failed:', err));
       });
     }
