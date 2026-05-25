@@ -535,6 +535,7 @@ textarea.form-control {
 /* Album Section & Grid */
 .album-section {
   margin-top: 0.5rem;
+  container-type: inline-size;
 }
 
 .album-grid {
@@ -542,7 +543,8 @@ textarea.form-control {
   grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
   margin-top: 0.75rem;
-  max-height: 320px;
+  /* 3열 카드 내에서 정사각형 이미지 3줄의 총 높이는 가로폭(100cqw)에서 카드 패딩(2.5rem)을 뺀 크기와 수학적으로 일치합니다. */
+  max-height: calc(100cqw - 2.5rem);
   overflow-y: auto;
   padding-right: 2px;
 }
