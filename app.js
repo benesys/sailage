@@ -644,6 +644,7 @@ function handleImageUpload(e) {
       placeholderView.style.display = 'none';
       canvas.style.display = 'block';
       downloadBtn.removeAttribute('disabled');
+      downloadBtn.style.display = 'flex';
       
       // Draw watermark once image is ready
       drawWatermark();
@@ -903,6 +904,7 @@ function resetPhotoState() {
   placeholderView.style.display = 'flex';
   previewBox.classList.remove('active');
   downloadBtn.setAttribute('disabled', 'true');
+  downloadBtn.style.display = 'none';
   imageInput.value = '';
   
   // Reset fields for the next session

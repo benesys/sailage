@@ -601,3 +601,13 @@ textarea.form-control {
 #capture-modal .form-group {
   margin-bottom: 0.8rem;
 }
+
+/* Disabled button styling */
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #ced4da !important;
+  color: var(--text-muted) !important;
+  box-shadow: none;
+  pointer-events: none;
+}

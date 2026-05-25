@@ -1,4 +1,4 @@
-const CACHE_NAME = 'forage-camera-v8';
+const CACHE_NAME = 'forage-camera-v9';
 const ASSETS = [
   './',
   './index.html',
