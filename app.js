@@ -910,6 +910,10 @@ function resetPhotoState() {
   modalBaleCountInput.value = '';
   parcelMemoInput.value = '';
   
+  // Reset custom crop inputs
+  customCropInput.value = '';
+  modalCustomCropInput.value = '';
+  
   console.log('Photo state and inputs have been reset for the next capture.');
 }
 
