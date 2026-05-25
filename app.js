@@ -318,9 +318,13 @@ function loadKakaoMapsSdk() {
   setTimeout(() => {
     if (!sdkLoaded) {
       state.sdkInitFailed = true;
+      const maskedKey = state.kakaoKey 
+        ? `${state.kakaoKey.substring(0, 5)}...${state.kakaoKey.substring(state.kakaoKey.length - 4)}` 
+        : '없음';
       gpsDetailDisplay.innerHTML = `
         <span style="color: var(--gps-poor); font-weight: bold;">[주소 변환 실패] 카카오 API 응답 대기 시간 초과</span><br>
         <small style="color: var(--text-dark); font-size: 0.8rem; display: block; margin-top: 0.3rem; line-height: 1.4;">
+          앱 설정 키: <strong style="color: var(--primary-deep);">${maskedKey}</strong> (설정에서 변경 가능)<br>
           카카오 개발자센터의 <strong>[내 애플리케이션 &gt; 플랫폼 &gt; Web 사이트 도메인]</strong>에 아래 주소가 등록되어 있는지 확인해 주세요:<br>
           <strong style="color: var(--gps-poor); font-size: 0.85rem; word-break: break-all;">${window.location.origin}</strong>
         </small>
